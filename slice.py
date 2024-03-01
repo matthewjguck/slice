@@ -1,8 +1,7 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
-import sys
+# This file will contain all code for slicing images
 
-def window():
-    app = QApplication(sys.argv)
-    win = QMainWindow()
-    win.setGeometry 
+def getImage():
+    print("GETTING IMAGE")
+
+def sliceImage(image):
+    print("SLICING IMAGE")
