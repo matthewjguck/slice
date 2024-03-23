@@ -9,7 +9,9 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtGui import QPixmap, QPainter
 from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QLabel
 import slice
 
 class Ui_MainWindow(object):
@@ -23,7 +25,7 @@ class Ui_MainWindow(object):
         self.sliceButton.setDefault(True)
         self.sliceButton.setObjectName("pushButton")
         self.uploadButton = QtWidgets.QPushButton(self.centralwidget)
-        self.uploadButton.setGeometry(QtCore.QRect(140, 100, 120, 32))
+        self.uploadButton.setGeometry(QtCore.QRect(140, 40, 120, 32))
         self.uploadButton.setDefault(False)
         self.uploadButton.setFlat(False)
         self.uploadButton.setObjectName("pushButton_2")
@@ -34,15 +36,24 @@ class Ui_MainWindow(object):
         self.label.setGeometry(QtCore.QRect(140, 180, 120, 16))
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.label.setObjectName("label")
+
+        ## Image viewer
+        self.ImageView = ImagePreviewLabel(self.centralwidget)  # Create an instance of ImagePreviewLabel
+        self.ImageView.setGeometry(QtCore.QRect(10, 90, 381, 71))
+        self.ImageView.setText("")
+        self.ImageView.setObjectName("ImageView")
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setSizeGripEnabled(True)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
         
         ## Button Triggers
         self.sliceButton.clicked.connect(self.clickedSlice)
-        self.uploadButton.clicked.connect(self.clickedUpload) 
+        self.uploadButton.clicked.connect(self.clickedUpload)
+        self.spinBox.valueChanged.connect(self.ImageView.updateNumSlices)
         ##
 
         self.retranslateUi(MainWindow)
@@ -50,9 +61,10 @@ class Ui_MainWindow(object):
 
 
     def clickedUpload(self):
-        filePath = slice.getImage(self.centralwidget)  # Pass the central widget as the parent for the dialog.
+        filePath = slice.getImage(self.centralwidget)  # Get the image file path
         if filePath:
             self.imagePath = filePath  # Store the selected image path in the instance.
+            self.ImageView.setImagePath(filePath)  # Display the image
         else:
             print("No file selected.")
 
@@ -74,12 +86,68 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Slice"))
         self.sliceButton.setText(_translate("MainWindow", "Slice!"))
         self.uploadButton.setText(_translate("MainWindow", "Upload Image"))
         self.label.setText(_translate("MainWindow", "How many slices?"))
 
 
+from PyQt5.QtCore import Qt
+
+class ImagePreviewLabel(QLabel):
+    def __init__(self, parent=None):
+        super(ImagePreviewLabel, self).__init__(parent)
+        self.numSlices = 0
+        self.imagePath = ''  # Keep track of the current image path
+
+    def setNumSlices(self, numSlices):
+        self.numSlices = numSlices
+        self.repaint()  # Trigger a repaint to update the slice lines
+
+    def updateNumSlices(self, value):
+        self.numSlices = value
+        self.repaint()  # Trigger a repaint to update the slice lines
+
+    def setImagePath(self, path):
+        print("Setting image path:", path)  # Print the path to verify it is correct
+        self.imagePath = path
+        pixmap = QPixmap(path)
+        print("Pixmap size:", pixmap.size())  # Print the pixmap's size to check if it's loaded correctly
+        print("Label size:", self.size())  # Print the label's size
+        
+        # Scale the image to fit the label's height while preserving aspect ratio
+        scaled_pixmap = pixmap.scaledToHeight(self.height(), Qt.SmoothTransformation)
+        
+        # Check if the scaled width is less than or equal to the label's width
+        if scaled_pixmap.width() <= self.width():
+            # If the scaled width is within the label's width, show the image as before
+            self.setPixmap(scaled_pixmap)
+        else:
+            # If the scaled width exceeds the label's width, scale the image to fit the label's width while preserving aspect ratio
+            scaled_pixmap = pixmap.scaledToWidth(self.width(), Qt.SmoothTransformation)
+            self.setPixmap(scaled_pixmap)
+
+
+
+    def resizeEvent(self, event):
+        if not self.pixmap():
+            return
+        self.setPixmap(self.pixmap().scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+    def paintEvent(self, event):
+        print("paintEvent called")  # Add this line for debugging
+        super(ImagePreviewLabel, self).paintEvent(event)
+        print("numSlices", self.numSlices)
+        if self.pixmap() is not None and self.numSlices > 1:
+            print("Drawing lines...")
+            painter = QPainter(self)
+            scaled_pixmap = self.pixmap().scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            scaled_image_width = scaled_pixmap.width()
+            sliceWidth = scaled_image_width / self.numSlices
+            painter.setPen(Qt.red)  # Set the pen color to red for slice lines
+            for i in range(1, self.numSlices):
+                x = int(i * sliceWidth)
+                painter.drawLine(x, 0, x, self.height())
 
 
 
