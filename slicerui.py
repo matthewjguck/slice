@@ -9,6 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QFileDialog
 import slice
 
 class Ui_MainWindow(object):
@@ -49,13 +50,26 @@ class Ui_MainWindow(object):
 
 
     def clickedUpload(self):
-        print("UPLOADED!")
-        slice.getImage()
+        filePath = slice.getImage(self.centralwidget)  # Pass the central widget as the parent for the dialog.
+        if filePath:
+            self.imagePath = filePath  # Store the selected image path in the instance.
+        else:
+            print("No file selected.")
 
     def clickedSlice(self):
-        print("CLICKED!")
-        slice.sliceImage("this is the image")
-        
+        if hasattr(self, 'imagePath'):
+            slices = self.spinBox.value()  # Get the number of slices from the spinBox.
+            if slices > 0:
+                # Let the user choose the save directory.
+                saveDir = str(QFileDialog.getExistingDirectory(self.centralwidget, "Select Save Directory"))
+                if saveDir:
+                    slice.sliceImage(self.imagePath, slices, saveDir)
+                else:
+                    print("No save directory selected.")
+            else:
+                print("Please enter a valid number of slices.")
+        else:
+            print("Please upload an image first.")
         
 
     def retranslateUi(self, MainWindow):
